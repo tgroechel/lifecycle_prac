@@ -55,6 +55,9 @@ public:
 			std::chrono::milliseconds{250},
 			
 			std::bind(&LifecycleTalker::doing_work, this));
+		// set up client_ to call the parameter server node for "param1"
+		client_ = this->create_client<rclcpp::node_interfaces::GetParameters>(
+			"parameter_node", rmw_qos_profile_services_default);
 
 	}
 
@@ -65,8 +68,24 @@ public:
 			"lifecycle_chatter", 10);
 			
 		int sleep_time = 3;
-		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, sleeping for %d seconds.", sleep_time);
-		std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
+		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from parameter_node", sleep_time);
+		// get the parameter from the parameter server node
+		auto request = std::make_shared<rclcpp::node_interfaces::GetParameters::Request>();
+		request->names.push_back("param1");
+		while (!client_->wait_for_service(1s)) {
+			if (!rclcpp::ok()) {
+				RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
+				return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
+			}
+			RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
+		}
+		auto result_future = client_->async_send_request(request);
+		if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) !=
+			rclcpp::executor::FutureReturnCode::SUCCESS)
+		{
+			RCLCPP_ERROR(this->get_logger(), "service call failed :(");
+			return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
+		}
 		RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
 		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
 			CallbackReturn::SUCCESS;
@@ -158,7 +177,10 @@ private:
 	std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>>
 		pub_;
 	std::shared_ptr<rclcpp::TimerBase> timer_;
-	std::shared_ptr<rclcpp::TimerBase> look_im_working_timer_;
+	// create a client to get "param1" parameter from the parameter server node
+	// the type should be GetParameters, which is defined in the rclcpp::node_interfaces::GetParameters
+	// the client_ is used in the on_configure() callback function
+	rclcpp::Client<rclcpp::node_interfaces::GetParameters>::SharedPtr client_;
 };
 
 int main(int argc, char *argv[])
