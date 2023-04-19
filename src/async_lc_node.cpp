@@ -57,7 +57,7 @@ public:
 			std::bind(&LifecycleTalker::doing_work, this));
 		// set up client_ to call the parameter server node for "param1"
 		client_ = this->create_client<rcl_interfaces::srv::GetParameters>(
-			"minimal_param_node", rclcpp::QoS(1));
+			"minimal_param_node/get_parameters", rclcpp::QoS(1));
 
 	}
 
