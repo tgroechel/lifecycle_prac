@@ -57,7 +57,7 @@ public:
 			std::bind(&LifecycleTalker::doing_work, this));
 		// set up client_ to call the parameter server node for "param1"
 		client_ = this->create_client<rcl_interfaces::srv::GetParameters>(
-			"parameter_node", rmw_qos_profile_services_default);
+			"minimal_param_node", rclcpp::QoS(1));
 
 	}
 
@@ -68,7 +68,7 @@ public:
 			"lifecycle_chatter", 10);
 			
 		int sleep_time = 3;
-		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from parameter_node", sleep_time);
+		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node", sleep_time);
 		// get the parameter from the parameter server node
 		auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
 		request->names.push_back("param1");
@@ -80,12 +80,7 @@ public:
 			RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
 		}
 		auto result_future = client_->async_send_request(request);
-		if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) !=
-			rclcpp::executor::FutureReturnCode::SUCCESS)
-		{
-			RCLCPP_ERROR(this->get_logger(), "service call failed :(");
-			return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
-		}
+		rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future);
 		// print result
 		auto result = result_future.get();
 		RCLCPP_INFO(this->get_logger(), "service call successful: %s", result->values[0].string_value.c_str());
