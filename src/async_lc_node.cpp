@@ -97,8 +97,7 @@ public:
 		auto result = client_->async_send_request(request, std::move(handle_get_parameters));
 		RCLCPP_INFO(
 			this->get_logger(),
-			"Sending a request to the server (request_id =%" PRId64
-			"), we're going to let you know the result when ready!",
+			"Sending a request to the server (request_id =%ld), we're going to let you know the result when ready!",
 			result.request_id);
 
 		RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
