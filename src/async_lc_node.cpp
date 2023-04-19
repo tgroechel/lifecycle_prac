@@ -67,8 +67,7 @@ public:
 		pub_ = this->create_publisher<std_msgs::msg::String>(
 			"lifecycle_chatter", 10);
 			
-		int sleep_time = 3;
-		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node", sleep_time);
+		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node");
 		// get the parameter from the parameter server node
 		auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
 		request->names.push_back("param1");
