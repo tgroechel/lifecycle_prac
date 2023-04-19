@@ -86,6 +86,9 @@ public:
 			RCLCPP_ERROR(this->get_logger(), "service call failed :(");
 			return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
 		}
+		// print result
+		auto result = result_future.get();
+		RCLCPP_INFO(this->get_logger(), "service call successful: %s", result->values[0].string_value.c_str());
 		RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
 		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
 			CallbackReturn::SUCCESS;
