@@ -56,7 +56,7 @@ public:
 			
 			std::bind(&LifecycleTalker::doing_work, this));
 		// set up client_ to call the parameter server node for "param1"
-		client_ = this->create_client<rclcpp::node_interfaces::GetParameters>(
+		client_ = this->create_client<rclcpp::node_interfaces::srv::GetParameters>(
 			"parameter_node", rmw_qos_profile_services_default);
 
 	}
@@ -70,7 +70,7 @@ public:
 		int sleep_time = 3;
 		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from parameter_node", sleep_time);
 		// get the parameter from the parameter server node
-		auto request = std::make_shared<rclcpp::node_interfaces::GetParameters::Request>();
+		auto request = std::make_shared<rclcpp::node_interfaces::srv::GetParameters::Request>();
 		request->names.push_back("param1");
 		while (!client_->wait_for_service(1s)) {
 			if (!rclcpp::ok()) {
@@ -181,9 +181,9 @@ private:
 		pub_;
 	std::shared_ptr<rclcpp::TimerBase> timer_;
 	// create a client to get "param1" parameter from the parameter server node
-	// the type should be GetParameters, which is defined in the rclcpp::node_interfaces::GetParameters
+	// the type should be GetParameters, which is defined in the rclcpp::node_interfaces::srv::GetParameters
 	// the client_ is used in the on_configure() callback function
-	rclcpp::Client<rclcpp::node_interfaces::GetParameters>::SharedPtr client_;
+	rclcpp::Client<rclcpp::node_interfaces::srv::GetParameters>::SharedPtr client_;
 };
 
 int main(int argc, char *argv[])
