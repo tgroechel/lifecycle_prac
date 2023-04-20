@@ -114,9 +114,6 @@ public:
             return lifecycle_msgs::msg::State::PRIMARY_STATE_UNKNOWN;
         }
     }
-    // ros2 run --prefix 'gdb -ex "break lifecycle_node_interface_impl.cpp:216" -ex run --args' lifecycle_prac talk
-    // colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    // ros2 run --prefix 'gdb -ex "break service.cpp:123" -ex run --args' lifecycle_prac service
 
     bool change_state(std::uint8_t transition,
                       std::chrono::seconds time_out = 20s)

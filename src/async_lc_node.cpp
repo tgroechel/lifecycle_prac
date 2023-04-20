@@ -31,171 +31,172 @@
 
 #include "std_msgs/msg/string.hpp"
 
+// include AsyncClientParameters to call the parameter server node
+#include "rclcpp/parameter_client.hpp"
+
 using namespace std::chrono_literals;
 class LifecycleTalker : public rclcpp_lifecycle::LifecycleNode
 {
 public:
-	explicit LifecycleTalker(const std::string &node_name,
-							 bool intra_process_comms = false)
-		: rclcpp_lifecycle::LifecycleNode(
-			  node_name,
-			  rclcpp::NodeOptions().use_intra_process_comms(
-				  intra_process_comms))
-	{
+    explicit LifecycleTalker(const std::string &node_name,
+                             bool intra_process_comms = false)
+        : rclcpp_lifecycle::LifecycleNode(
+              node_name,
+              rclcpp::NodeOptions().use_intra_process_comms(
+                  intra_process_comms))
+    {
 
-		register_on_configure(std::bind(
-								  &LifecycleTalker::on_configure, this,
-								  std::placeholders::_1),
-							  true); // is_async = true
-		register_on_deactivate(std::bind(
-								   &LifecycleTalker::on_deactivate, this,
-								   std::placeholders::_1),
-							   true); // is_async = true
-		timer_ = this->create_wall_timer(
-			std::chrono::milliseconds{250},
+        register_on_configure(std::bind(
+                                  &LifecycleTalker::on_configure, this,
+                                  std::placeholders::_1),
+                              true); // is_async = true
+        register_on_deactivate(std::bind(
+                                   &LifecycleTalker::on_deactivate, this,
+                                   std::placeholders::_1),
+                               true); // is_async = true
+        timer_ = this->create_wall_timer(
+            std::chrono::milliseconds{250},
+            std::bind(&LifecycleTalker::doing_work, this));
 
-			std::bind(&LifecycleTalker::doing_work, this));
-		// set up client_ to call the parameter server node for "param1"
-		client_ = this->create_client<rcl_interfaces::srv::GetParameters>(
-			"minimal_param_node/get_parameters", rclcpp::QoS(1));
-	}
+        params_client_ = std::make_shared<rclcpp::AsyncParametersClient>(this,
+                                                                         "minimal_param_node");
+    }
 
-	rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-	on_configure(const rclcpp_lifecycle::State &)
-	{
-		pub_ = this->create_publisher<std_msgs::msg::String>(
-			"lifecycle_chatter", 10);
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_configure(const rclcpp_lifecycle::State &)
+    {
+        pub_ = this->create_publisher<std_msgs::msg::String>(
+            "lifecycle_chatter", 10);
 
-		RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node");
-		// get the parameter from the parameter server node
-		auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
-		request->names.push_back("param1");
-		while (!client_->wait_for_service(1s)) {
-			if (!rclcpp::ok()) {
-				RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-				return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
-			}
-			RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
-		}
-		auto result_future = client_->async_send_request(request);
-		result_future.wait();
+        RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node");
 
-		auto result = result_future.get();
-		RCLCPP_INFO(this->get_logger(), "service call successful: %s", result->values[0].string_value.c_str());
+        while (!params_client_->wait_for_service(1s))
+        {
+            if (!rclcpp::ok())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
+                return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
+            }
+            RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
+        }
 
-		RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
-		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-			CallbackReturn::SUCCESS;
-	}
+        auto result_future = params_client_->get_parameters({"param1"});
+        result_future.wait();
+        auto result = result_future.get();
+        RCLCPP_INFO(this->get_logger(), "service call successful: param1 = %s", result[0].get_value<std::string>().c_str());
 
-	rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-	on_activate(const rclcpp_lifecycle::State &state)
-	{
-		LifecycleNode::on_activate(state); // activates managed entities (i.e., lifecycle_publishers)
+        RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            CallbackReturn::SUCCESS;
+    }
 
-		int sleep_time = 3;
-		RCLCPP_INFO(get_logger(), "on_activate() {sync} is called, sleeping for %d seconds.", sleep_time);
-		std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
-		RCUTILS_LOG_INFO_NAMED(get_name(), "on_activate() done sleeping, returning success");
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_activate(const rclcpp_lifecycle::State &state)
+    {
+        LifecycleNode::on_activate(state); // activates managed entities (i.e., lifecycle_publishers)
 
-		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-			CallbackReturn::SUCCESS;
-	}
+        int sleep_time = 3;
+        RCLCPP_INFO(get_logger(), "on_activate() {sync} is called, sleeping for %d seconds.", sleep_time);
+        std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
+        RCLCPP_INFO(this->get_logger(), "on_activate() done sleeping, returning success");
 
-	rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-	on_deactivate(const rclcpp_lifecycle::State &state)
-	{
-		LifecycleNode::on_deactivate(state);
-		RCUTILS_LOG_INFO_NAMED(get_name(), "on_deactivate() is called.");
-		std::this_thread::sleep_for(3s);
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            CallbackReturn::SUCCESS;
+    }
 
-		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-			CallbackReturn::SUCCESS;
-	}
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_deactivate(const rclcpp_lifecycle::State &state)
+    {
+        int sleep_time = 3;
+        LifecycleNode::on_deactivate(state);
+        RCLCPP_INFO(this->get_logger(), "on_deactivate() {async} is called, sleeping for %d seconds.", sleep_time);
+        std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
+        RCLCPP_INFO(this->get_logger(), "on_deactivate() done sleeping, returning success");
 
-	rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-	on_cleanup(const rclcpp_lifecycle::State &)
-	{
-		timer_.reset();
-		pub_.reset();
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            CallbackReturn::SUCCESS;
+    }
 
-		RCUTILS_LOG_INFO_NAMED(get_name(), "on cleanup is called.");
-		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-			CallbackReturn::SUCCESS;
-	}
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_cleanup(const rclcpp_lifecycle::State &)
+    {
+        timer_.reset();
+        pub_.reset();
 
-	rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-	on_shutdown(const rclcpp_lifecycle::State &state)
-	{
-		timer_.reset();
-		pub_.reset();
+        RCUTILS_LOG_INFO_NAMED(get_name(), "on cleanup is called.");
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            CallbackReturn::SUCCESS;
+    }
 
-		RCUTILS_LOG_INFO_NAMED(get_name(),
-							   "on shutdown is called from state %s.",
-							   state.label().c_str());
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_shutdown(const rclcpp_lifecycle::State &state)
+    {
+        timer_.reset();
+        pub_.reset();
 
-		return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-			CallbackReturn::SUCCESS;
-	}
+        RCUTILS_LOG_INFO_NAMED(get_name(),
+                               "on shutdown is called from state %s.",
+                               state.label().c_str());
 
-	void publish()
-	{
-		static size_t count = 0;
-		auto msg = std::make_unique<std_msgs::msg::String>();
-		msg->data = "Lifecycle HelloWorld #" + std::to_string(++count);
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            CallbackReturn::SUCCESS;
+    }
 
-		// Print the current state for demo purposes
-		if (!pub_->is_activated())
-		{
-			RCLCPP_INFO(get_logger(),
-						"Lifecycle publisher is currently "
-						"inactive. Messages are not "
-						"published.");
-		}
-		else
-		{
-			RCLCPP_INFO(get_logger(),
-						"Lifecycle publisher is "
-						"active. Publishing: [%s]",
-						msg->data.c_str());
-		}
+    void publish()
+    {
+        static size_t count = 0;
+        auto msg = std::make_unique<std_msgs::msg::String>();
+        msg->data = "Lifecycle HelloWorld #" + std::to_string(++count);
 
-		pub_->publish(std::move(msg));
-	}
+        // Print the current state for demo purposes
+        if (!pub_->is_activated())
+        {
+            RCLCPP_INFO(get_logger(),
+                        "Lifecycle publisher is currently "
+                        "inactive. Messages are not "
+                        "published.");
+        }
+        else
+        {
+            RCLCPP_INFO(get_logger(),
+                        "Lifecycle publisher is "
+                        "active. Publishing: [%s]",
+                        msg->data.c_str());
+        }
 
-	void doing_work()
-	{
-		RCLCPP_INFO(this->get_logger(), "LC not blocked, time(%lf), in state (%s)",
-					this->now().seconds(),
-					this->get_current_state().label().c_str());
-	}
+        pub_->publish(std::move(msg));
+    }
+
+    void doing_work()
+    {
+        RCLCPP_INFO(this->get_logger(), "LC not blocked, time(%lf), in state (%s)",
+                    this->now().seconds(),
+                    this->get_current_state().label().c_str());
+    }
 
 private:
-	std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>>
-		pub_;
-	std::shared_ptr<rclcpp::TimerBase> timer_;
-	// create a client to get "param1" parameter from the parameter server node
-	// the type should be GetParameters, which is defined in the rcl_interfaces::srv::GetParameters
-	// the client_ is used in the on_configure() callback function
-	rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedPtr client_;
+    std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>>
+        pub_;
+    std::shared_ptr<rclcpp::TimerBase> timer_;
+    std::shared_ptr<rclcpp::AsyncParametersClient> params_client_;
 };
 
 int main(int argc, char *argv[])
 {
-	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+    setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
-	rclcpp::init(argc, argv);
+    rclcpp::init(argc, argv);
 
-	rclcpp::executors::SingleThreadedExecutor exe;
+    rclcpp::executors::SingleThreadedExecutor exe;
 
-	std::shared_ptr<LifecycleTalker> lc_node =
-		std::make_shared<LifecycleTalker>("lc_talker");
+    std::shared_ptr<LifecycleTalker> lc_node =
+        std::make_shared<LifecycleTalker>("async_lc_node");
 
-	exe.add_node(lc_node->get_node_base_interface());
+    exe.add_node(lc_node->get_node_base_interface());
 
-	exe.spin();
+    exe.spin();
 
-	rclcpp::shutdown();
+    rclcpp::shutdown();
 
-	return 0;
+    return 0;
 }
