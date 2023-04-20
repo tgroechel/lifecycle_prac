@@ -29,10 +29,10 @@
 
 using namespace std::chrono_literals;
 
-static constexpr char const *lifecycle_node = "lc_talker";
+static constexpr char const *lifecycle_node = "async_lc_node";
 
-static constexpr char const *node_get_state_topic = "lc_talker/get_state";
-static constexpr char const *node_change_state_topic = "lc_talker/change_state";
+static constexpr char const *node_get_state_topic = "async_lc_node/get_state";
+static constexpr char const *node_change_state_topic = "async_lc_node/change_state";
 
 template <typename FutureT, typename WaitTimeT>
 std::future_status wait_for_result(FutureT &future, WaitTimeT time_to_wait)
