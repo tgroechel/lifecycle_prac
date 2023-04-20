@@ -10,7 +10,7 @@ class MinimalParam : public rclcpp::Node
 {
 public:
   MinimalParam()
-  : Node("minimal_param_node")
+      : Node("minimal_param_node")
   {
     this->declare_parameter("param1", "world");
   }
@@ -19,7 +19,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<MinimalParam>());
