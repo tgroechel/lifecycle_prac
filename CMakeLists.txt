@@ -51,6 +51,17 @@ ament_target_dependencies(listen
   rclcpp_lifecycle
   std_msgs)
 
+add_executable(defer_node src/defer_node.cpp)
+ament_target_dependencies(defer_node 
+  lifecycle_msgs
+  rclcpp_lifecycle
+  std_msgs)
+
+add_executable(simple_two_ints src/simple_two_ints.cpp)
+ament_target_dependencies(simple_two_ints 
+  lifecycle_msgs
+  rclcpp_lifecycle
+  std_msgs)
 
 install(TARGETS
     parameter_node
