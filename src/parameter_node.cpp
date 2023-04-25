@@ -3,6 +3,7 @@
 #include <string>
 
 #include <rclcpp/rclcpp.hpp>
+#include "lifecycle_prac/deferrable_callback_waitable.hpp"
 
 using namespace std::chrono_literals;
 
@@ -10,13 +11,12 @@ class MinimalParam : public rclcpp::Node
 {
 public:
   MinimalParam()
-      : Node("minimal_param_node")
+      : Node("minimal_param_node"), dcw_()
   {
     this->declare_parameter("param1", "world");
   }
 
 private:
-  rclcpp::TimerBase::SharedPtr timer_;
 };
 
 int main(int argc, char **argv)
