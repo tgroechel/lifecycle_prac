@@ -74,6 +74,8 @@ install(TARGETS
     async_lc_node
     listen
     change_state_client
+    defer_node
+    simple_two_ints
     DESTINATION lib/${PROJECT_NAME}
 )
 

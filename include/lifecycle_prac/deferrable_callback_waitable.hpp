@@ -3,7 +3,6 @@
 #include <functional>
 #include <chrono>
 #include "rclcpp/waitable.hpp"
-#include "rclcpp/rclcpp.hpp"
 
 template <typename T>
 class DeferrableCallbackWrapper
@@ -23,10 +22,7 @@ public:
     void call()
     {
         callback_(data_);
-    }
-
-    void send_resp()
-    {
+        response_sent_ = false;
     }
 
     void send_resp(T data)
@@ -34,6 +30,7 @@ public:
         data_ = data;
         response_sent_ = true;
     }
+
 
 private:
     CallbackFunction callback_;
@@ -52,14 +49,10 @@ public:
     {
     }
 
-    bool is_ready()
-    {
-        return response_sent_;
-    }
-
     void call()
     {
         callback_();
+        response_sent_ = false;
     }
 
     void send_resp()
@@ -82,21 +75,14 @@ public:
         rcl_guard_condition_options_t guard_condition_options =
             rcl_guard_condition_get_default_options();
 
-        // Guard condition is used by the wait set to handle execute-or-not logic
         gc_ = rcl_get_zero_initialized_guard_condition();
         auto ret = rcl_guard_condition_init(
             &gc_, context_ptr->get_rcl_context().get(), guard_condition_options);
         (void)ret;
     }
 
-    /**
-     * @brief tell the CallbackGroup how many guard conditions are ready in this waitable
-     */
     size_t get_number_of_ready_guard_conditions() { return 1; }
 
-    /**
-     * @brief tell the CallbackGroup that this waitable is ready to execute anything
-     */
     bool is_ready(rcl_wait_set_t *wait_set) override
     {
         (void)wait_set;
@@ -104,24 +90,11 @@ public:
         return deferrable_callback_ptr_->is_ready();
     }
 
-    /**
-     * @brief add_to_wait_set is called by rclcpp during NodeWaitables::add_waitable() and CallbackGroup::add_waitable()
-      waitable_ptr = std::make_shared<DeferrableCallbackWrapper>();
-      node->get_node_waitables_interface()->add_waitable(waitable_ptr, (rclcpp::CallbackGroup::SharedPtr) nullptr);
-     */
     virtual void add_to_wait_set(rcl_wait_set_t *wait_set) override
     {
         std::lock_guard<std::recursive_mutex> lock(reentrant_mutex_);
         auto ret = rcl_wait_set_add_guard_condition(wait_set, &gc_, NULL);
         (void)ret;
-        // return RCL_RET_OK == ret;
-    }
-
-    // XXX check this against the threading model of the multi-threaded executor.
-    void execute()
-    {
-        std::lock_guard<std::recursive_mutex> lock(cb_mutex_);
-        deferrable_callback_ptr_->call();
     }
 
     virtual void

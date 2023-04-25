@@ -30,7 +30,7 @@ public:
             dcw_, (rclcpp::CallbackGroup::SharedPtr) nullptr);
     // initialize timer
     timer_ = this->create_wall_timer(
-        1s, std::bind(&DeferNode::timer_callback, this));
+        std::chrono::milliseconds{250}, std::bind(&DeferNode::timer_callback, this));
 
     // create a client
     client_ = this->create_client<example_interfaces::srv::AddTwoInts>("add_two_ints");
@@ -38,14 +38,16 @@ public:
 
   void print_data(int data)
   {
-    std::cout << "response: " << data << std::endl;
+    RCLCPP_INFO(this->get_logger(), "Deferred callback");
+    RCLCPP_INFO(this->get_logger(), "response: %d", data);
   }
 
   void timer_callback()
   {
     if (deferal_sent)
     {
-      return;
+        RCLCPP_INFO(this->get_logger(), "Doing work on timer thread");
+        return;
     }
     deferal_sent = true;
 
@@ -57,7 +59,7 @@ public:
     using ServiceResponseFuture =
         rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedFutureWithRequest;
     auto response_received_callback =
-        [logger = this->get_logger(), dcw_ = this->dcw_, deferal_sent = this->deferal_sent](ServiceResponseFuture future)
+        [logger = this->get_logger(), dcw_ = this->dcw_](ServiceResponseFuture future)
     {
       auto request_response_pair = future.get();
       RCLCPP_INFO(
