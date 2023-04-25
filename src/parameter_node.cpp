@@ -11,7 +11,7 @@ class MinimalParam : public rclcpp::Node
 {
 public:
   MinimalParam()
-      : Node("minimal_param_node"), dcw_()
+      : Node("minimal_param_node")
   {
     this->declare_parameter("param1", "world");
   }

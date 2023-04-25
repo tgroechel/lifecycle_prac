@@ -3,12 +3,14 @@
 #include <functional>
 #include <chrono>
 #include "rclcpp/waitable.hpp"
+#include "rclcpp/rclcpp.hpp"
 
-template <typename... T>
-class DeferrableCallbackWrapper
-{
+
+
+template <typename T>
+class DeferrableCallbackWrapper{
 public:
-    using CallbackFunction = std::function<T(void)>;
+    using CallbackFunction = std::function<void(T)>;
 
     explicit DeferrableCallbackWrapper(CallbackFunction callback) : callback_(callback)
     {
@@ -24,14 +26,14 @@ public:
         callback_(data_);
     }
 
-    void send_resp(T data) // T&& data movable would not allow for T = void specialization
-    {
-        data_ = data;
-        response_sent_ = true;
-    }
-
     void send_resp()
     {
+        
+    }
+
+    void send_resp(T data)
+    {
+        data_ = data;
         response_sent_ = true;
     }
 
@@ -43,16 +45,36 @@ private:
 
 // Specialization to handle 'void' for call & send_resp
 template <>
-inline void DeferrableCallbackWrapper<void>::call()
-{
-    callback_();
-}
-template <>
-inline void DeferrableCallbackWrapper<void>::send_resp()
-{
-    response_sent_ = true;
-}
+class DeferrableCallbackWrapper<void>{
+public:
+    using CallbackFunction = std::function<void()>;
 
+    explicit DeferrableCallbackWrapper(CallbackFunction callback) : callback_(callback)
+    {
+    }
+
+    bool is_ready()
+    {
+        return response_sent_;
+    }
+
+    void call()
+    {
+        callback_();
+    }
+
+    void send_resp()
+    {
+        response_sent_ = true;
+    }
+
+private:
+    CallbackFunction callback_;
+    bool response_sent_{false};
+};
+
+
+template<typename T>
 class DeferrableCallbackWaitable : public rclcpp::Waitable
 {
 public:
@@ -64,7 +86,7 @@ public:
 
         // Guard condition is used by the wait set to handle execute-or-not logic
         gc_ = rcl_get_zero_initialized_guard_condition();
-        rcl_ret_t ret = rcl_guard_condition_init(
+        rcl_guard_condition_init(
             &gc_, context_ptr->get_rcl_context().get(), guard_condition_options);
     }
 
@@ -76,11 +98,11 @@ public:
     /**
      * @brief tell the CallbackGroup that this waitable is ready to execute anything
      */
-    bool is_ready(rcl_wait_set_t *wait_set)
+    bool is_ready(rcl_wait_set_t *wait_set) override
     {
         (void)wait_set;
         std::lock_guard<std::recursive_mutex> lock(reentrant_mutex_);
-        return deferrable_callback_.is_ready();
+        return deferrable_callback_ptr_->is_ready();
     }
 
     /**
@@ -88,7 +110,7 @@ public:
       waitable_ptr = std::make_shared<DeferrableCallbackWrapper>();
       node->get_node_waitables_interface()->add_waitable(waitable_ptr, (rclcpp::CallbackGroup::SharedPtr) nullptr);
      */
-    bool add_to_wait_set(rcl_wait_set_t *wait_set)
+    bool add_to_wait_set(rcl_wait_set_t *wait_set) override
     {
         std::lock_guard<std::recursive_mutex> lock(reentrant_mutex_);
         rcl_ret_t ret = rcl_wait_set_add_guard_condition(wait_set, &gc_, NULL);
@@ -99,25 +121,26 @@ public:
     void execute()
     {
         std::lock_guard<std::recursive_mutex> lock(cb_mutex_);
-        deferrable_callback_.call();
+        deferrable_callback_ptr_->call();
     }
 
-    void add_callback(const std::shared_ptr<DeferrableCallbackWrapper> &callback)
+    void add_callback(const std::shared_ptr<DeferrableCallbackWrapper<T>> &callback)
     {
         std::lock_guard<std::recursive_mutex> lock(cb_mutex_);
-        deferrable_callback_ = callback;
+        deferrable_callback_ptr_ = callback;
         rcl_trigger_guard_condition(&gc_);
     }
-    void add_callback(std::shared_ptr<DeferrableCallbackWrapper> &&callback)
+
+    void add_callback(std::shared_ptr<DeferrableCallbackWrapper<T>> &&callback)
     {
         std::lock_guard<std::recursive_mutex> lock(cb_mutex_);
-        deferrable_callback_ = std::move(callback);
+        deferrable_callback_ptr_ = std::move(callback);
         rcl_trigger_guard_condition(&gc_);
     }
 
     void remove_callback()
     {
-        deferrable_callback_.reset();
+        deferrable_callback_ptr_.reset();
     }
 
 private:
@@ -125,5 +148,5 @@ private:
     rcl_guard_condition_t gc_;             //!< guard condition to drive the waitable
 
     std::recursive_mutex cb_mutex_; //!< mutex to allow this callback to be added to multiple callback groups simultaneously
-    std::shared_ptr<DeferrableCallbackWrapper> deferrable_callback_;
+    std::shared_ptr<DeferrableCallbackWrapper<T>> deferrable_callback_ptr_;
 };

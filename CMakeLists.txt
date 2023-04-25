@@ -16,6 +16,7 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(example_interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -28,6 +29,9 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+include_directories(include)
+
 
 add_executable(parameter_node src/parameter_node.cpp)
 ament_target_dependencies(parameter_node rclcpp)
@@ -55,13 +59,15 @@ add_executable(defer_node src/defer_node.cpp)
 ament_target_dependencies(defer_node 
   lifecycle_msgs
   rclcpp_lifecycle
-  std_msgs)
+  std_msgs
+  example_interfaces)
 
 add_executable(simple_two_ints src/simple_two_ints.cpp)
 ament_target_dependencies(simple_two_ints 
   lifecycle_msgs
   rclcpp_lifecycle
-  std_msgs)
+  std_msgs
+  example_interfaces)
 
 install(TARGETS
     parameter_node
