@@ -2,6 +2,8 @@
 #include <functional>
 #include <string>
 
+#include "rclcpp/context.hpp"
+#include "rclcpp/contexts/default_context.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include "lifecycle_prac/deferrable_callback_waitable.hpp"
 #include "example_interfaces/srv/add_two_ints.hpp"
@@ -16,12 +18,12 @@ public:
   DeferNode()
       : Node("defer_node")
   {
-    auto callback = std::make_shared<DeferrableCallbackWrapper<void>>(
+    auto callback = std::make_shared<DeferrableCallbackWrapper<int>>(
         std::bind(&DeferNode::print_data, this, std::placeholders::_1));
 
-    dcw_ = make_shared<DeferrableCallbackWaitable>(rclcpp::contexts::default_context::get_global_default_context());
+    dcw_ = std::make_shared<DeferrableCallbackWaitable<int>>();
 
-    dcw_->add_callback(std::move(callback));
+    dcw_->add_callback(callback);
 
     this->get_node_waitables_interface()
         ->add_waitable(
@@ -46,6 +48,12 @@ public:
       return;
     }
     deferal_sent = true;
+
+
+    auto request = std::make_shared<AddTwoInts::Request>();
+    request->a = 1;
+    request->b = 2;
+
     using ServiceResponseFuture =
         rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedFutureWithRequest;
     auto response_received_callback =
@@ -58,7 +66,7 @@ public:
           request_response_pair.first->a,
           request_response_pair.first->b,
           request_response_pair.second->sum);
-      dcw_->send_resp(request_response_pair.second->sum);
+      dcw_->get_cb()->send_resp(request_response_pair.second->sum);
     };
     auto result = client_->async_send_request(
         request, std::move(response_received_callback));
