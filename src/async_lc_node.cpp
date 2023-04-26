@@ -46,15 +46,18 @@ public:
                   intra_process_comms))
     {
 
-        register_on_configure_async(std::bind(
+        register_on_configure(std::bind(
             &LifecycleTalker::on_configure_async, this,
             std::placeholders::_1, std::placeholders::_2));
+        register_on_activate(std::bind(
+            &LifecycleTalker::on_activate_async, this,
+            std::placeholders::_1, std::placeholders::_2));) 
+
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds{250},
             std::bind(&LifecycleTalker::doing_work, this));
-
-        params_client_ = std::make_shared<rclcpp::AsyncParametersClient>(this,
-                                                                         "minimal_param_node");
+            
+        client_ = this->create_client<rclcpp::srv::GetParameters>("minimal_param_node/get_parameters");
     }
 
     void
@@ -66,26 +69,12 @@ public:
 
         RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node");
 
-        while (!params_client_->wait_for_service(1s))
-        {
-            if (!rclcpp::ok())
-            {
-                RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-                async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-                                                                  CallbackReturn::ERROR);
-                return;
-            }
-            RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
-        }
-
-        using ServiceResponseFuture =
-            rclcpp::Client<>::SharedFutureWithRequest;
+        using ServiceResponseFuture = rclcpp::Client<rclcpp::srv::GetParameters>::SharedFuture;
         auto response_received_callback =
             [logger = this->get_logger(), async_change_state_ptr](ServiceResponseFuture future)
         {
             auto request_response_pair = future.get();
-            RCLCPP_INFO(
-                request_response_pair.second->sum);
+            RCLCPP_INFO("Received parameter response: %s", request_response_pair.second->values[0].string_value.c_str());
             async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
                                                               CallbackReturn::SUCCESS);
         };
@@ -97,18 +86,24 @@ public:
             result.request_id);
     }
 
-    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-    on_activate(const rclcpp_lifecycle::State &state)
-    {
+    void
+    on_activate_async(const rclcpp_lifecycle::State &,
+                       std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
+    { 
         LifecycleNode::on_activate(state); // activates managed entities (i.e., lifecycle_publishers)
+        // create a thread to do some work passing the async_change_state_ptr to the thread
+        std::thread t(&LifecycleTalker::defer_on_activate_work, this, async_change_state_ptr);
+        t.detach();
+    }
 
+    void defer_on_activate_work(std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
+    {
         int sleep_time = 3;
-        RCLCPP_INFO(get_logger(), "on_activate() {sync} is called, sleeping for %d seconds.", sleep_time);
+        RCLCPP_INFO(this->get_logger(), "on_activate() {async} is called, sleeping is separate thread for %d seconds.", sleep_time);
         std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
         RCLCPP_INFO(this->get_logger(), "on_activate() done sleeping, returning success");
-
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-            CallbackReturn::SUCCESS;
+        async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+                                                              CallbackReturn::SUCCESS);
     }
 
     rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
@@ -185,7 +180,9 @@ private:
     std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>>
         pub_;
     std::shared_ptr<rclcpp::TimerBase> timer_;
-    std::shared_ptr<rclcpp::AsyncParametersClient> params_client_;
+    // std::shared_ptr<rclcpp::AsyncParametersClient> params_client_;
+    // create an async client for parameters not use AsyncParametersClient but instead using a basic client
+    rclcpp::Client<rclcpp::srv::GetParameters>::SharedPtr client_;
 };
 
 int main(int argc, char *argv[])
