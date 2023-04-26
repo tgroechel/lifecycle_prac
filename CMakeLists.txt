@@ -55,12 +55,12 @@ ament_target_dependencies(listen
   rclcpp_lifecycle
   std_msgs)
 
-add_executable(defer_node src/defer_node.cpp)
-ament_target_dependencies(defer_node 
-  lifecycle_msgs
-  rclcpp_lifecycle
-  std_msgs
-  example_interfaces)
+# add_executable(defer_node src/defer_node.cpp)
+# ament_target_dependencies(defer_node 
+#   lifecycle_msgs
+#   rclcpp_lifecycle
+#   std_msgs
+#   example_interfaces)
 
 add_executable(simple_two_ints src/simple_two_ints.cpp)
 ament_target_dependencies(simple_two_ints 
@@ -74,7 +74,7 @@ install(TARGETS
     async_lc_node
     listen
     change_state_client
-    defer_node
+    #defer_node
     simple_two_ints
     DESTINATION lib/${PROJECT_NAME}
 )
