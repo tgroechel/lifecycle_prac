@@ -58,7 +58,8 @@ public:
     }
 
     void
-    on_configure_async(const rclcpp_lifecycle::State &, std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
+    on_configure_async(const rclcpp_lifecycle::State &,
+                       std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
     {
         pub_ = this->create_publisher<std_msgs::msg::String>(
             "lifecycle_chatter", 10);
@@ -77,18 +78,23 @@ public:
             RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
         }
 
-        auto result_future = params_client_->get_parameters({"param1"});
-        result_future.wait();
-        auto result = result_future.get();
-        RCLCPP_INFO(this->get_logger(), "service call successful: param1 = %s", result[0].get_value<std::string>().c_str());
-
-        int sleep_time = 3;
-        RCLCPP_INFO(get_logger(), "on_configure() {async} sleeping for %d seconds.", sleep_time);
-        std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
-
-        RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
-        async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-                                                          CallbackReturn::SUCCESS);
+        using ServiceResponseFuture =
+            rclcpp::Client<>::SharedFutureWithRequest;
+        auto response_received_callback =
+            [logger = this->get_logger(), async_change_state_ptr](ServiceResponseFuture future)
+        {
+            auto request_response_pair = future.get();
+            RCLCPP_INFO(
+                request_response_pair.second->sum);
+            async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+                                                              CallbackReturn::SUCCESS);
+        };
+        auto result = client_->async_send_request(
+            request, std::move(response_received_callback));
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Sending a request to the parameter server (request_id =%ld), we're going to let you know the result when ready!",
+            result.request_id);
     }
 
     rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
