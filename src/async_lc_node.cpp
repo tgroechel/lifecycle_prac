@@ -46,14 +46,9 @@ public:
                   intra_process_comms))
     {
 
-        register_on_configure(std::bind(
-                                  &LifecycleTalker::on_configure, this,
-                                  std::placeholders::_1),
-                              true); // is_async = true
-        register_on_deactivate(std::bind(
-                                   &LifecycleTalker::on_deactivate, this,
-                                   std::placeholders::_1),
-                               true); // is_async = true
+        register_on_configure_async(std::bind(
+            &LifecycleTalker::on_configure_async, this,
+            std::placeholders::_1, std::placeholders::_2));
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds{250},
             std::bind(&LifecycleTalker::doing_work, this));
@@ -62,8 +57,8 @@ public:
                                                                          "minimal_param_node");
     }
 
-    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-    on_configure(const rclcpp_lifecycle::State &)
+    void
+    on_configure_async(const rclcpp_lifecycle::State &, std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
     {
         pub_ = this->create_publisher<std_msgs::msg::String>(
             "lifecycle_chatter", 10);
@@ -75,7 +70,9 @@ public:
             if (!rclcpp::ok())
             {
                 RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-                return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
+                async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+                                                                  CallbackReturn::ERROR);
+                return;
             }
             RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
         }
@@ -85,9 +82,13 @@ public:
         auto result = result_future.get();
         RCLCPP_INFO(this->get_logger(), "service call successful: param1 = %s", result[0].get_value<std::string>().c_str());
 
+        int sleep_time = 3;
+        RCLCPP_INFO(get_logger(), "on_configure() {async} sleeping for %d seconds.", sleep_time);
+        std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
+
         RCLCPP_INFO(this->get_logger(), "on_configure() done, returning success");
-        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-            CallbackReturn::SUCCESS;
+        async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+                                                          CallbackReturn::SUCCESS);
     }
 
     rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
