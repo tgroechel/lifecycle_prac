@@ -47,10 +47,10 @@ public:
                   intra_process_comms))
     {
 
-        register_on_configure_async(std::bind(
+        register_async_on_configure(std::bind(
             &LifecycleTalker::on_configure_async, this,
             std::placeholders::_1, std::placeholders::_2));
-        register_on_activate_async(std::bind(
+        register_async_on_activate(std::bind(
             &LifecycleTalker::on_activate_async, this,
             std::placeholders::_1, std::placeholders::_2));
 
@@ -63,7 +63,7 @@ public:
 
     void
     on_configure_async(const rclcpp_lifecycle::State &,
-                       std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
+                       std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> async_change_state_ptr)
     {
         pub_ = this->create_publisher<std_msgs::msg::String>(
             "lifecycle_chatter", 10);
@@ -76,7 +76,7 @@ public:
         {
             auto request_response_pair = future.get();
             RCLCPP_INFO(logger, "Received parameter response: %s", request_response_pair->values[0].string_value.c_str());
-            async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            async_change_state_ptr->continue_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
                                                               CallbackReturn::SUCCESS);
         };
 
@@ -92,7 +92,7 @@ public:
 
     void
     on_activate_async(const rclcpp_lifecycle::State & state,
-                       std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
+                       std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> async_change_state_ptr)
     { 
         LifecycleNode::on_activate(state); // activates managed entities (i.e., lifecycle_publishers)
         // create a thread to do some work passing the async_change_state_ptr to the thread
@@ -100,13 +100,13 @@ public:
         t.detach();
     }
 
-    void defer_on_activate_work(std::shared_ptr<rclcpp_lifecycle::AsyncChangeState> async_change_state_ptr)
+    void defer_on_activate_work(std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> async_change_state_ptr)
     {
         int sleep_time = 3;
         RCLCPP_INFO(this->get_logger(), "on_activate() {async} is called, sleeping is separate thread for %d seconds.", sleep_time);
         std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
         RCLCPP_INFO(this->get_logger(), "on_activate() done sleeping, returning success");
-        async_change_state_ptr->complete_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+        async_change_state_ptr->continue_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
                                                               CallbackReturn::SUCCESS);
     }
 
