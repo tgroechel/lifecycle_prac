@@ -69,11 +69,20 @@ ament_target_dependencies(simple_two_ints
   std_msgs
   example_interfaces)
 
+add_executable(simple_node_client src/simple_node_client.cpp)
+  ament_target_dependencies(simple_node_client 
+    lifecycle_msgs
+    rclcpp_lifecycle
+    std_msgs
+    example_interfaces)
+  
+
 install(TARGETS
     parameter_node
     async_lc_node
     listen
     change_state_client
+    simple_node_client
     #defer_node
     simple_two_ints
     DESTINATION lib/${PROJECT_NAME}
