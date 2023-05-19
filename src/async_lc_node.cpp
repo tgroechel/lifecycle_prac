@@ -76,7 +76,7 @@ public:
         {
             auto request_response_pair = future.get();
             RCLCPP_INFO(logger, "Received parameter response: %s", request_response_pair->values[0].string_value.c_str());
-            async_change_state_ptr->continue_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+            async_change_state_ptr->send_callback_resp(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
                                                               CallbackReturn::SUCCESS);
         };
 
@@ -106,7 +106,7 @@ public:
         RCLCPP_INFO(this->get_logger(), "on_activate() {async} is called, sleeping is separate thread for %d seconds.", sleep_time);
         std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
         RCLCPP_INFO(this->get_logger(), "on_activate() done sleeping, returning success");
-        async_change_state_ptr->continue_change_state(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+        async_change_state_ptr->send_callback_resp(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
                                                               CallbackReturn::SUCCESS);
     }
 
