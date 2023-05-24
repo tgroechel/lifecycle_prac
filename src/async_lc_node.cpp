@@ -61,26 +61,61 @@ public:
     client_ = this->create_client<rcl_interfaces::srv::GetParameters>("minimal_param_node/get_parameters");
   }
 
-  rclcpp::Client<rcl_interfaces::srv::GetParameters>::;
-
-  on_configure_async_load_param(std::shared_future<>
-    std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> change_state_hdl)
-
-  void
-  on_configure_async(const rclcpp_lifecycle::State &,
-                     std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> change_state_hdl)
-  {
     // create thread
     // detatch it
     // fake fulfill promise...
-    
+    // https://github.com/ros2/rclcpp/pull/1728 -> use remove_request with a timer
+    // ^ full example: https://github.com/ros2/examples/blob/iron/rclcpp/services/async_client/main.cpp#L41
+    // prune_pending_requests: https://github.com/ros2/rclcpp/blob/rolling/rclcpp/include/rclcpp/client.hpp#L753 
+
+
+  void monitor_on_configure_cancels(std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> change_state_hdl){
+    RCLCPP_INFO(this->get_logger(), 
+      "Cancel monitoring, change_state_hdl{response_sent: %d, is_cancelled: %d}", 
+        change_state_hdl->response_sent(), 
+        change_state_hdl->transition_is_cancelled());
+
+    if(change_state_hdl->response_sent()){
+      transition_cancel_monitoring_timer_.reset();
+      return;
+    }
+    else if(change_state_hdl->transition_is_cancelled()){
+      /*handle cancel*/
+      size_t num_pruned_req = client_->prune_pending_requests();
+      RCLCPP_INFO(this->get_logger(), "Pruned %d requests, expecting this to be 1", num_pruned_req);
+      change_state_hdl->handled_transition_cancel(true);
+
+      transition_cancel_monitoring_timer_.reset();
+    }
+  }
+
+  void on_configure_async(const rclcpp_lifecycle::State &,
+                          std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> change_state_hdl)
+  {
     RCLCPP_INFO(this->get_logger(), "on_configure() {async} is called, getting `param1` from minimal_param_node");
 
+    // Cancel monitoring
+    transition_cancel_monitoring_timer_ = create_wall_timer(
+      std::chrono::milliseconds{50},
+      std::bind(&monitor_on_configure_cancels, this, change_state_hdl)
+    );
 
+    // Callback for future response of getting a parameter
+    auto response_received_callback =
+      [logger = this->get_logger(), change_state_hdl](rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedFuture future)
+    {
+      if(!change_state_hdl->response_sent()){
+        auto request_response_pair = future.get();
+        RCLCPP_INFO(logger, "Received parameter response: %s", request_response_pair->values[0].string_value.c_str());
+        change_state_hdl->send_callback_resp(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+                                                        CallbackReturn::SUCCESS);
+      }
+    };
+
+    // Sending the request and attaching the callback
     auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
     request->names.push_back("param1");
-    auto result = client_->async_send_request(
-        request, std::move(response_received_callback));
+    auto result = client_->async_send_request(request, std::move(response_received_callback));
     RCLCPP_INFO(
         this->get_logger(),
         "Sending a request to the parameter server (request_id =%ld), we're going to let you know the result when ready!",
@@ -134,7 +169,7 @@ public:
     std::this_thread::sleep_for(std::chrono::seconds{sleep_time});
     RCLCPP_INFO(this->get_logger(), "on_activate() done sleeping, returning success");
     change_state_hdl->send_callback_resp(rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
-                                                   CallbackReturn::SUCCESS);
+                                             CallbackReturn::SUCCESS);
   }
 
   // semi-arbitrary
@@ -159,8 +194,6 @@ public:
   //                                                    CallbackReturn::SUCCESS);
   //   }
   // }
-
-
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_deactivate(const rclcpp_lifecycle::State &state)
@@ -236,6 +269,7 @@ private:
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>>
       pub_;
   std::shared_ptr<rclcpp::TimerBase> timer_;
+  std::shared_ptr<rclcpp::TimerBase> transition_cancel_monitoring_timer_;
   // std::shared_ptr<rclcpp::AsyncParametersClient> params_client_;
   // create an async client for parameters not use AsyncParametersClient but instead using a basic client
   rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedPtr client_;
