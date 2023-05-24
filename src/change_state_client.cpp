@@ -70,6 +70,10 @@ public:
         client_change_state_ =
             this->create_client<lifecycle_msgs::srv::ChangeState>(
                 node_change_state_topic);
+
+        client_cancel_transition_ =
+            this->create_client<lifecycle_msgs::srv::CancelTransition>(
+                "/cancel_transition"); // TODO @tgroechel: rename with node after update
     }
 
     unsigned int get_state(std::chrono::seconds time_out = 3s)
@@ -161,12 +165,12 @@ public:
         }
     }
 
-    bool cancel_transition(float timeout_sec = 2)
+    bool cancel_transition(std::chrono::seconds timeout_sec = 10s)
     {
-        auto request = std::make_shared<lifecycle_msgs::srv:CancelTransition::Request>();
-        request->timeout_sec = timeout_sec;
+        auto request = std::make_shared<lifecycle_msgs::srv::CancelTransition::Request>();
+        request->timeout_sec = ((float)timeout_sec.count()) - 0.05;
         
-        if (!client_cancel_transition_->wait_for_service(std::chrono::seconds{timeout_sec + 0.1}))
+        if (!client_cancel_transition_->wait_for_service(timeout_sec))
         {
             RCLCPP_ERROR(get_logger(),
                          "Service %s is not available.",
@@ -177,7 +181,7 @@ public:
         auto future_result =
             client_cancel_transition_->async_send_request(request).future.share();
 
-        auto future_status = wait_for_result(future_result, time_out);
+        auto future_status = wait_for_result(future_result, timeout_sec);
 
         if (future_status != std::future_status::ready)
         {
@@ -191,16 +195,14 @@ public:
         if (future_result.get()->success)
         {
             RCLCPP_INFO(get_logger(),
-                        "Transition %d successfully triggered.",
-                        static_cast<int>(transition));
+                        "Transition successfully cancelled.");
             return true;
         }
         else
         {
             RCLCPP_WARN(get_logger(),
                         "Failed to cancel transition with reason: %s", 
-                        future_result.get()->error_msg);
-                        RCLCPP_WARN(get_logger(),)
+                        future_result.get()->error_msg.c_str());
             return false;
         }
 
@@ -255,8 +257,9 @@ void callee_script(std::shared_ptr<LifecycleServiceClient> lc_client)
 
     std::cout << "send TRANSITION_CONFIGURE" << std::endl;
     if(!lc_client->change_state(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE, 2s)){
-        lc_client->cancel_transition(1.5);
+        lc_client->cancel_transition();
     }
+    std::cout << "DONE" << std::endl;
 
     time_between_state_changes.sleep();
 

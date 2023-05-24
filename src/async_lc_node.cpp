@@ -68,27 +68,6 @@ public:
     // ^ full example: https://github.com/ros2/examples/blob/iron/rclcpp/services/async_client/main.cpp#L41
     // prune_pending_requests: https://github.com/ros2/rclcpp/blob/rolling/rclcpp/include/rclcpp/client.hpp#L753 
 
-
-  void monitor_on_configure_cancels(std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> change_state_hdl){
-    RCLCPP_INFO(this->get_logger(), 
-      "Cancel monitoring, change_state_hdl{response_sent: %d, is_cancelled: %d}", 
-        change_state_hdl->response_sent(), 
-        change_state_hdl->transition_is_cancelled());
-
-    if(change_state_hdl->response_sent()){
-      transition_cancel_monitoring_timer_.reset();
-      return;
-    }
-    else if(change_state_hdl->transition_is_cancelled()){
-      /*handle cancel*/
-      size_t num_pruned_req = client_->prune_pending_requests();
-      RCLCPP_INFO(this->get_logger(), "Pruned %d requests, expecting this to be 1", num_pruned_req);
-      change_state_hdl->handled_transition_cancel(true);
-
-      transition_cancel_monitoring_timer_.reset();
-    }
-  }
-
   void on_configure_async(const rclcpp_lifecycle::State &,
                           std::shared_ptr<rclcpp_lifecycle::ChangeStateHandler> change_state_hdl)
   {
@@ -96,10 +75,28 @@ public:
 
     // Cancel monitoring
     transition_cancel_monitoring_timer_ = create_wall_timer(
-      std::chrono::milliseconds{50},
-      std::bind(&monitor_on_configure_cancels, this, change_state_hdl)
-    );
+      std::chrono::milliseconds{10},
+      [this, change_state_hdl](){
+        RCLCPP_INFO(this->get_logger(), 
+          "Cancel monitoring, change_state_hdl{response_sent: %d, is_cancelled: %d}", 
+            change_state_hdl->response_sent(), 
+            change_state_hdl->transition_is_cancelled());
 
+        if(change_state_hdl->response_sent()){
+          transition_cancel_monitoring_timer_.reset();
+          return;
+        }
+        else if(change_state_hdl->transition_is_cancelled()){
+          /*handle cancel*/
+          size_t num_pruned_req = client_->prune_pending_requests();
+          RCLCPP_INFO(this->get_logger(), "Pruned %ld requests, expecting this to be 1", num_pruned_req);
+          change_state_hdl->handled_transition_cancel(true);
+
+          transition_cancel_monitoring_timer_.reset();
+        }
+      }
+    );
+    
     // Callback for future response of getting a parameter
     auto response_received_callback =
       [logger = this->get_logger(), change_state_hdl](rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedFuture future)
@@ -158,7 +155,7 @@ public:
   {
     LifecycleNode::on_activate(state); // activates managed entities (i.e., lifecycle_publishers)
     // create a thread to do some work passing the change_state_hdl to the thread
-    std::thread t(&LifecycleTalker::defer_on_activate_work, this, state, change_state_hdl);
+    std::thread t(&LifecycleTalker::defer_on_activate_work, this, change_state_hdl);
     t.detach();
   }
 
