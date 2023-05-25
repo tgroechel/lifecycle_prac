@@ -75,12 +75,12 @@ public:
 
     // Cancel monitoring
     transition_cancel_monitoring_timer_ = create_wall_timer(
-      std::chrono::milliseconds{75},
+      std::chrono::milliseconds{100},
       [this, change_state_hdl](){
-        RCLCPP_INFO(this->get_logger(), 
-          "Cancel monitoring, change_state_hdl{response_sent: %d, is_cancelled: %d}", 
-            change_state_hdl->response_sent(), 
-            change_state_hdl->transition_is_cancelled());
+        // RCLCPP_INFO(this->get_logger(), 
+        //   "Cancel monitoring, change_state_hdl{response_sent: %d, is_cancelled: %d}", 
+        //     change_state_hdl->response_sent(), 
+        //     change_state_hdl->transition_is_cancelled());
 
         if(change_state_hdl->response_sent()){
           transition_cancel_monitoring_timer_.reset();
@@ -89,7 +89,7 @@ public:
         else if(change_state_hdl->transition_is_cancelled()){
           /*handle cancel*/
           size_t num_pruned_req = client_->prune_pending_requests();
-          RCLCPP_INFO(this->get_logger(), "Pruned %ld requests, expecting this to be 1", num_pruned_req);
+          RCLCPP_INFO(this->get_logger(), "Handle cancel: pruned %ld request", num_pruned_req);
           change_state_hdl->handled_transition_cancel(true);
 
           transition_cancel_monitoring_timer_.reset();
