@@ -34,6 +34,7 @@ static constexpr char const *lifecycle_node = "async_lc_node";
 
 static constexpr char const *node_get_state_topic = "async_lc_node/get_state";
 static constexpr char const *node_change_state_topic = "async_lc_node/change_state";
+static constexpr char const *node_cancel_transition_topic = "async_lc_node/cancel_transition";
 
 template <typename FutureT, typename WaitTimeT>
 std::future_status wait_for_result(FutureT &future, WaitTimeT time_to_wait)
@@ -73,7 +74,7 @@ public:
 
         client_cancel_transition_ =
             this->create_client<lifecycle_msgs::srv::CancelTransition>(
-                "/cancel_transition"); // TODO @tgroechel: rename with node after update
+                node_cancel_transition_topic); // TODO @tgroechel: rename with node after update
     }
 
     unsigned int get_state(std::chrono::seconds time_out = 3s)
@@ -144,7 +145,7 @@ public:
         {
             RCLCPP_ERROR(
                 get_logger(),
-                "Server time out while getting current state for node %s",
+                "Server time out while changing state for node %s",
                 lifecycle_node);
             return false;
         }
