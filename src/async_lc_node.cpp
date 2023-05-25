@@ -257,8 +257,7 @@ public:
 
   void doing_work()
   {
-    RCLCPP_INFO(this->get_logger(), "LC not blocked, time(%lf), in state (%s)",
-                this->now().seconds(),
+    RCLCPP_INFO(this->get_logger(), "LC not blocked, in state (%s)",
                 this->get_current_state().label().c_str());
   }
 

@@ -84,7 +84,7 @@ public:
 
         if (!client_get_state_->wait_for_service(time_out))
         {
-            RCLCPP_ERROR(get_logger(),
+            RCLCPP_WARN(get_logger(),
                          "Service %s is not available.",
                          client_get_state_->get_service_name());
             return lifecycle_msgs::msg::State::PRIMARY_STATE_UNKNOWN;
@@ -97,7 +97,7 @@ public:
 
         if (future_status != std::future_status::ready)
         {
-            RCLCPP_ERROR(
+            RCLCPP_WARN(
                 get_logger(),
                 "Server time out while getting current state for node %s",
                 lifecycle_node);
@@ -114,7 +114,7 @@ public:
         }
         else
         {
-            RCLCPP_ERROR(get_logger(),
+            RCLCPP_WARN(get_logger(),
                          "Failed to get current state for node %s",
                          lifecycle_node);
             return lifecycle_msgs::msg::State::PRIMARY_STATE_UNKNOWN;
@@ -130,7 +130,7 @@ public:
 
         if (!client_change_state_->wait_for_service(time_out))
         {
-            RCLCPP_ERROR(get_logger(),
+            RCLCPP_WARN(get_logger(),
                          "Service %s is not available.",
                          client_change_state_->get_service_name());
             return false;
@@ -143,7 +143,7 @@ public:
 
         if (future_status != std::future_status::ready)
         {
-            RCLCPP_ERROR(
+            RCLCPP_WARN(
                 get_logger(),
                 "Server time out while changing state for node %s",
                 lifecycle_node);
@@ -173,7 +173,7 @@ public:
         
         if (!client_cancel_transition_->wait_for_service(timeout_sec))
         {
-            RCLCPP_ERROR(get_logger(),
+            RCLCPP_WARN(get_logger(),
                          "Service %s is not available.",
                          client_cancel_transition_->get_service_name());
             return false;
@@ -187,7 +187,7 @@ public:
 
         if (future_status != std::future_status::ready)
         {
-            RCLCPP_ERROR(
+            RCLCPP_WARN(
                 get_logger(),
                 "Server time out while cancelling transition for node %s",
                 lifecycle_node);
