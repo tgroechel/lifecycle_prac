@@ -75,7 +75,7 @@ public:
 
     // Cancel monitoring
     transition_cancel_monitoring_timer_ = create_wall_timer(
-      std::chrono::milliseconds{10},
+      std::chrono::milliseconds{75},
       [this, change_state_hdl](){
         RCLCPP_INFO(this->get_logger(), 
           "Cancel monitoring, change_state_hdl{response_sent: %d, is_cancelled: %d}", 

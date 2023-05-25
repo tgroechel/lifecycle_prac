@@ -257,11 +257,16 @@ void callee_script(std::shared_ptr<LifecycleServiceClient> lc_client)
 
     rclcpp::WallRate time_between_state_changes(fps);
 
-    std::cout << "send TRANSITION_CONFIGURE" << std::endl;
-    if(!lc_client->change_state(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE, 2s)){
-        lc_client->cancel_transition();
+    bool transitioned{false};
+    for(int i = 0; i < 5 && !transitioned; ++i)
+    {
+        std::cout << "Attempting TRANSITION_CONFIGURE #" << i << std::endl;
+        transitioned = lc_client->change_state(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE, 2s);
+        if(!transitioned){
+            lc_client->cancel_transition();
+        }
     }
-    std::cout << "DONE" << std::endl;
+    std::cout << "CONFIGURED" << std::endl;
 
     time_between_state_changes.sleep();
 
