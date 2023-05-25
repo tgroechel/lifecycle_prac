@@ -179,6 +179,7 @@ public:
             return false;
         }
 
+        RCLCPP_INFO(get_logger(), "Sending cancel transition");
         auto future_result =
             client_cancel_transition_->async_send_request(request).future.share();
 
@@ -188,7 +189,7 @@ public:
         {
             RCLCPP_ERROR(
                 get_logger(),
-                "Server time out while  %s",
+                "Server time out while cancelling transition for node %s",
                 lifecycle_node);
             return false;
         }
