@@ -209,36 +209,36 @@ private:
 };
 
 void callee_script(std::shared_ptr<LifecycleServiceClient> lc_client) {
+
+  /*Retry with cancels on timeout*/
   int num_retries = 5;
   bool transitioned{false};
   for (int i = 0; i < num_retries && !transitioned; ++i) {
-    RCLCPP_INFO(this->get_logger(),"Attempting TRANSITION_CONFIGURE #%d", i);
+    std::cout << "Attempting TRANSITION_CONFIGURE #" << i << std::endl;
     transitioned = lc_client->change_state(
         lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE, 2s);
     if (!transitioned) {
-      if(!lc_client->cancel_transition()){
-        RCLCPP_ERROR(this->get_logger(), "Transition cancel failed, returning");
+      if (!lc_client->cancel_transition()) {
+        std::cerr << "Transition cancel failed, returning" << std::endl;
         return;
       }
     }
   }
   if (transitioned) {
-    RCLCPP_INFO(this->get_logger(),"CONFIGURED");
+    std::cout << "CONFIGURED" << std::endl;
   } else {
-    RCLCPP_ERROR(this->get_logger(), "Configured failed, returning");
+    std::cerr << "Configured failed, returning" << std::endl;
     return;
   }
 
-  RCLCPP_INFO(this->get_logger(), "send TRANSITION_ACTIVATE" );
-
+  std::cout << "send TRANSITION_ACTIVATE" << std::endl;
   lc_client->change_state(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
 
-  time_between_state_changes.sleep();
-  RCLCPP_INFO(this->get_logger(), "send TRANSITION_DEACTIVATE" );
+  std::cout << "send TRANSITION_DEACTIVATE" << std::endl;
   lc_client->change_state(
       lifecycle_msgs::msg::Transition::TRANSITION_DEACTIVATE);
-      
-  RCLCPP_INFO(this->get_logger(), "Demo completed").
+
+  std::cout << "Demo completed" << std::endl;
 }
 
 void wake_executor(std::shared_future<void> future,

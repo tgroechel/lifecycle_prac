@@ -60,16 +60,14 @@ public:
     // Cancel monitoring
     transition_cancel_monitoring_timer_ = create_wall_timer(
         std::chrono::milliseconds{100}, [this, change_state_hdl]() {
-          if (change_state_hdl->response_sent()) {
+          if (!change_state_hdl->is_executing()) {
             transition_cancel_monitoring_timer_.reset();
             return;
-          } else if (change_state_hdl
-                         ->transition_is_cancelled()) { /*handle cancel*/
+          } else if (change_state_hdl->is_canceling()) { /*handle cancel*/
             size_t num_pruned_req = client_->prune_pending_requests();
             RCLCPP_INFO(this->get_logger(), "Handle cancel: pruned %ld request",
                         num_pruned_req);
-            change_state_hdl->handled_transition_cancel(true);
-
+            change_state_hdl->canceled(true);
             transition_cancel_monitoring_timer_.reset();
           }
         });
@@ -79,7 +77,7 @@ public:
         [logger = this->get_logger(), change_state_hdl](
             rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedFuture
                 future) {
-          if (!change_state_hdl->response_sent()) {
+          if (change_state_hdl->is_executing()) {
             auto request_response_pair = future.get();
             RCLCPP_INFO(logger, "Received parameter response: %s",
                         request_response_pair->values[0].string_value.c_str());
