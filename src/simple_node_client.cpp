@@ -22,7 +22,6 @@
 using AddTwoInts = example_interfaces::srv::AddTwoInts;
 
 
-
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
@@ -35,7 +34,7 @@ int main(int argc, char * argv[])
     }
     RCLCPP_INFO(node->get_logger(), "waiting for service to appear...");
   }
-    RCLCPP_INFO(node->get_logger(), "Request 1");
+  RCLCPP_INFO(node->get_logger(), "Request 1");
   auto request = std::make_shared<AddTwoInts::Request>();
   request->a = 41;
   request->b = 1;
