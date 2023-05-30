@@ -14,15 +14,15 @@ This demo is scaffolded from the `rclcpp::Lifecycle` [demo here]().
 
 
 ### Video
-![AsyncTransitionDemo](.img/cancel_demo_.mkv)
+HERE
 > Left: AsyncLCNode; Top right: ChangeStateClient; Bottom right;
 1. AsyncLCNode has a walltimer that prints every to demonstrate if the executor is blocked or not
 2. ChangeStateClient attempts to transition sequence of CONFIGURE → ACTIVATE → DEACTIVATE, cancelling + retrying each if a 2s timeout is hit without a response
 3. Async LC Node in on_configure sends a request to the parameter node (which is not running at the beginning).
 It should* be checking if this exists but this is demonstrating a handing transition (server exists → server goes down → client sends request will hang)
-4. Once the parameter node is started up, the `on_configure` can successfully complete
-5. Activate request sent from ChangeStateClient
-6. AsyncLCNode `on_activate` spawns another thread that sleeps for 3 seconds, responds when completed
-7. Deactivate request sent form ChangeStateClient
-8. AsyncLCNode `on_deactivate` is a synchronous transition that sleeps for 3 seconds, blocking the executor, and returning
+1. Once the parameter node is started up, the `on_configure` can successfully complete
+2. Activate request sent from ChangeStateClient
+3. AsyncLCNode `on_activate` spawns another thread that sleeps for 3 seconds, responds when completed
+4. Deactivate request sent form ChangeStateClient
+5. AsyncLCNode `on_deactivate` is a synchronous transition that sleeps for 3 seconds, blocking the executor, and returning
 
