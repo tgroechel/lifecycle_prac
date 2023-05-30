@@ -14,7 +14,7 @@ This demo is scaffolded from the `rclcpp::Lifecycle` [demo here]().
 
 
 ### Video
-`.mkv` here
+![AsyncTransitionDemo](.img/cancel_demo_.mkv)
 > Left: AsyncLCNode; Top right: ChangeStateClient; Bottom right;
 1. AsyncLCNode has a walltimer that prints every to demonstrate if the executor is blocked or not
 2. ChangeStateClient attempts to transition sequence of CONFIGURE → ACTIVATE → DEACTIVATE, cancelling + retrying each if a 2s timeout is hit without a response
