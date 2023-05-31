@@ -91,6 +91,7 @@ public:
     auto request =
         std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
     request->names.push_back("param1");
+    RCLCPP_INFO(this->get_logger(), "Sending async param request");
     client_->async_send_request(request, std::move(response_received_callback));
   } // Off executor
 
