@@ -67,7 +67,7 @@ public:
             size_t num_pruned_req = client_->prune_pending_requests();
             RCLCPP_INFO(this->get_logger(), "Handle cancel: pruned %ld request",
                         num_pruned_req);
-            change_state_hdl->canceled(true);
+            change_state_hdl->handle_canceled(true);
             transition_cancel_monitoring_timer_.reset();
           }
         });
