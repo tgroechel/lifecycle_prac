@@ -14,8 +14,7 @@ This demo is scaffolded from the `rclcpp::Lifecycle` [demo here]().
 
 
 ### Video
-https://github.com/tgroechel/lifecycle_prac/assets/15292506/691ae312-824a-48fb-a08c-1d4c04bf3225
-
+https://github.com/tgroechel/lifecycle_prac/assets/15292506/55600d76-9cea-40b4-8423-76d81e7e7fbf
 > Left: AsyncLCNode; Top right: ChangeStateClient; Bottom right;
 1. AsyncLCNode has a walltimer that prints every to demonstrate if the executor is blocked or not
 2. ChangeStateClient attempts to transition sequence of CONFIGURE → ACTIVATE → DEACTIVATE, cancelling + retrying each if a 2s timeout is hit without a response

@@ -1,3 +1,5 @@
+.vscode/*
+
 install/
 log/
 build/
@@ -28,4 +30,4 @@ qtcreator-*
 COLCON_IGNORE
 AMENT_IGNORE
 
-.vscode/*
+

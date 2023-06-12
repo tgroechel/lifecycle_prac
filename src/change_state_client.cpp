@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <map>
 
 #include "lifecycle_msgs/msg/state.hpp"
 #include "lifecycle_msgs/msg/transition.hpp"
@@ -220,6 +221,31 @@ public:
       result.request_id);
   }
 
+
+  // Map of https://github.com/tgroechel/rcl_interfaces/blob/rolling/lifecycle_msgs/msg/State.msg
+  std::map<int,std::string> id_to_transition_name_map_ ={
+    /*Primary states*/
+    {0 , "unknown"},
+    {1 , "unconfigured"},
+    {2 , "inactive"},
+    {3 , "active"},
+    {4 , "finalized"},
+    /*Transition states*/
+    {10 , "configuring"},
+    {11 , "cleaningup"},
+    {12 , "shuttingdown"},
+    {13 , "activating"},
+    {14 , "deactivating"},
+    {15 , "errorprocessing"}
+  };
+  std::string get_state_name_from_id(uint8_t id){
+    auto it = id_to_transition_name_map_.find(id);
+    if(it == id_to_transition_name_map_.end()){
+      return "NOT FOUND IN MAP [id_to_transition_name_map_]";
+    }
+    return it->second;
+  }
+
 private:
   std::shared_ptr<rclcpp::Client<lifecycle_msgs::srv::GetState>>
   client_get_state_;
@@ -244,10 +270,13 @@ void callee_script(std::shared_ptr<LifecycleServiceClient> lc_client)
         std::cerr << "Transition cancel failed, returning" << std::endl;
         return;
       }
+      else{
+        lc_client->get_state(); /*prints out current state*/
+      }
     }
   }
   if (transitioned) {
-    std::cout << "CONFIGURED" << std::endl;
+    lc_client->get_state(); /*prints out current state*/
   } else {
     std::cerr << "Configured failed, returning" << std::endl;
     return;
@@ -255,10 +284,12 @@ void callee_script(std::shared_ptr<LifecycleServiceClient> lc_client)
 
   std::cout << "send TRANSITION_ACTIVATE" << std::endl;
   lc_client->change_state(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
+  lc_client->get_state(); /*prints out current state*/
 
   std::cout << "send TRANSITION_DEACTIVATE" << std::endl;
   lc_client->change_state(
     lifecycle_msgs::msg::Transition::TRANSITION_DEACTIVATE);
+  lc_client->get_state(); /*prints out current state*/
 
   std::cout << "Demo completed" << std::endl;
 }
