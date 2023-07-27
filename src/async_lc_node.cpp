@@ -67,7 +67,7 @@ public:
             size_t num_pruned_req = client_->prune_pending_requests();
             RCLCPP_INFO(this->get_logger(), "Handle cancel: pruned %ld request",
                         num_pruned_req);
-            change_state_hdl->canceled(true);
+            change_state_hdl->handle_canceled(true);
             transition_cancel_monitoring_timer_.reset();
           }
         });
@@ -91,6 +91,7 @@ public:
     auto request =
         std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
     request->names.push_back("param1");
+    RCLCPP_INFO(this->get_logger(), "Sending async param request");
     client_->async_send_request(request, std::move(response_received_callback));
   } // Off executor
 
