@@ -10,7 +10,7 @@ using namespace std::placeholders;
 class AsyncServiceExample : public rclcpp::Node {
 
 public:
-  explicit LifecycleServiceClient(const std::string &node_name)
+  explicit AsyncServiceExample(const std::string &node_name)
       : Node(node_name) {
     
     // Bind the add_w_param_req to the service
