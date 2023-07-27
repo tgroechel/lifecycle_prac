@@ -60,7 +60,7 @@ private:
         std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
     request->names.push_back("random_int");
     m_param_client->async_send_request(request,
-                                       std::move(response_received_callback));
+                                       std::move(param_response_received_callback));
   } // Service callback done, off Executor
     // Executor can now process incoming events (including the SharedFuture response)
 
