@@ -1,6 +1,7 @@
 #include <chrono>
 #include <functional>
 #include <string>
+#include <stdlib.h>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -13,6 +14,7 @@ public:
   : Node("minimal_param_node")
   {
     this->declare_parameter("param1", "world");
+    this->declare_parameter("random_int", rand() % 100);
   }
 
 private:
