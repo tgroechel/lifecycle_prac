@@ -33,6 +33,7 @@ private:
       const std::shared_ptr<rmw_request_id_t> header,
       const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request>
           request) {
+            
     /**
      * Create a future callback
      * This callback gets "thrown" onto the executor when m_param_client sends
@@ -40,7 +41,6 @@ private:
      * parameter service is received From this, we can do our work and send our
      * original AddTwoInts Response
      */
-    using ServiceResponseFuture = rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedFutureWithRequest;
     auto param_response_received_callback =
         [header, request, this](rclcpp::Client<rcl_interfaces::srv::GetParameters>::SharedFuture future) {
           // Get the parameter response
@@ -49,17 +49,17 @@ private:
           // Create response to original service request
           example_interfaces::srv::AddTwoInts::Response resp;
           resp.sum =
-              request->a + request->b + request_params->values[1].int_value;
+              request->a + request->b + request_params->values[1].integer_value;
 
           // Send response using m_service member
           m_service->send_response(*header, resp);
         };
 
     // Sending the request and attaching the callback
-    auto request =
+    auto param_request =
         std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
-    request->names.push_back("random_int");
-    m_param_client->async_send_request(request,
+    param_request->names.push_back("random_int");
+    m_param_client->async_send_request(param_request,
                                        std::move(param_response_received_callback));
   } // Service callback done, off Executor
     // Executor can now process incoming events (including the SharedFuture response)
@@ -80,7 +80,7 @@ void add(
     const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request>
         request) {
   /*Do work*/
-  int res = request.a + request.b;
+  int res = request->a + request->b;
 
   /*Create response*/
   example_interfaces::srv::AddTwoInts::Response resp;

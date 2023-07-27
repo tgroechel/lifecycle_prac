@@ -36,23 +36,32 @@ include_directories(include)
 add_executable(parameter_node src/parameter_node.cpp)
 ament_target_dependencies(parameter_node rclcpp)
 
-add_executable(async_lc_node src/async_lc_node.cpp)
-ament_target_dependencies(async_lc_node 
-  lifecycle_msgs
-  rclcpp_lifecycle
-  std_msgs)
+# add_executable(async_lc_node src/async_lc_node.cpp)
+# ament_target_dependencies(async_lc_node 
+#   lifecycle_msgs
+#   rclcpp_lifecycle
+#   std_msgs)
 
-add_executable(change_state_client src/change_state_client.cpp)
-  ament_target_dependencies(change_state_client 
+# add_executable(change_state_client src/change_state_client.cpp)
+#   ament_target_dependencies(change_state_client 
+#     lifecycle_msgs
+#     rclcpp_lifecycle
+#     std_msgs)
+
+add_executable(async_srv src/async_srv.cpp)
+  ament_target_dependencies(async_srv 
     lifecycle_msgs
     rclcpp_lifecycle
-    std_msgs)
+    std_msgs
+    example_interfaces)
+
 
 
 install(TARGETS
     parameter_node
-    async_lc_node
-    change_state_client
+    # async_lc_node
+    # change_state_client
+    async_srv
     DESTINATION lib/${PROJECT_NAME}
 )
 
